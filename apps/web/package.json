@@ -1,0 +1,23 @@
+{
+  "name": "@cantina/web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun --bun vite --host 0.0.0.0",
+    "build": "vue-tsc -b && bun --bun vite build",
+    "preview": "bun --bun vite preview --host 0.0.0.0",
+    "typecheck": "vue-tsc -b"
+  },
+  "dependencies": {
+    "@cantina/types": "workspace:*",
+    "@cantina/utils": "workspace:*",
+    "vue": "^3.5.44"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "@vitejs/plugin-vue": "^6.0.10",
+    "typescript": "~6.0.3",
+    "vite": "^8.3.4",
+    "vue-tsc": "^3.3.13"
+  }
+}

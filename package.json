@@ -1,0 +1,10 @@
+{
+  "name": "cantina",
+  "private": true,
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "dev:server": "bun run --filter @cantina/server dev",
+    "dev:web": "bun run --filter @cantina/web dev",
+    "typecheck": "bun run --filter '*' typecheck"
+  }
+}

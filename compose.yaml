@@ -1,5 +1,14 @@
 name: cantina
 
+x-bun: &bun
+  image: localhost/cantina-bun:latest
+  build:
+    context: .
+    dockerfile: Containerfile
+  working_dir: /repo
+  volumes:
+    - .:/repo:Z
+
 services:
   db:
     image: docker.io/library/postgres:17-alpine
@@ -22,16 +31,42 @@ services:
       timeout: 5s
       retries: 10
 
-  adminer:
-    image: docker.io/library/adminer:latest
-    container_name: cantina-adminer
+  install:
+    <<: *bun
+    container_name: cantina-install
+    command: bun install
+
+  server:
+    <<: *bun
+    container_name: cantina-server
     restart: unless-stopped
+    command: bun run dev:server
     environment:
-      ADMINER_DEFAULT_SERVER: db
+      PORT: 3333
+      DATABASE_URL: postgres://${POSTGRES_USER:-cantina}:${POSTGRES_PASSWORD:-cantina}@db:5432/${POSTGRES_DB:-cantina}
+      TZ: America/Sao_Paulo
     ports:
-      - "${ADMINER_PORT:-8080}:8080"
+      - "${SERVER_PORT:-3333}:3333"
     depends_on:
-      - db
+      install:
+        condition: service_completed_successfully
+      db:
+        condition: service_healthy
+
+  web:
+    <<: *bun
+    container_name: cantina-web
+    restart: unless-stopped
+    command: bun run dev:web
+    environment:
+      API_URL: http://server:3333
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    depends_on:
+      install:
+        condition: service_completed_successfully
+      server:
+        condition: service_started
 
 volumes:
   db-data:

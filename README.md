@@ -42,6 +42,17 @@ podman-compose down -v
 
 O código é montado nos containers, então possui hotreload.
 
+Mudanças no `.env` ou no `compose.yaml` exigem recriar os containers: `podman-compose down && podman-compose up -d` (sem `-v`, o banco é mantido).
+
+## Autenticação
+A API usa JWT. Defina `JWT_SECRET` no `.env` (`openssl rand -hex 32`).
+
+- `POST /api/auth/cadastro` autocadastro (sempre Consumidor)
+- `POST /api/auth/login` retorna `{ token, usuario }`
+- `GET /api/auth/me` usuário logado e saldo
+
+As demais rotas exigem o header `Authorization: Bearer <token>`. Rotas de usuários e escrita de produtos são exclusivas do Administrador; recargas e compras usam o usuário do token.
+
 ## Comandos Bun dentro do container
 ```sh
 podman exec -it cantina-server bun add <pacote> --cwd apps/server

@@ -5,9 +5,9 @@ CREATE TABLE usuario (
     senha_hash     VARCHAR(255)  NOT NULL,
     perfil         VARCHAR(20)   NOT NULL DEFAULT 'CONSUMIDOR'
                    CHECK (perfil IN ('ADMINISTRADOR', 'CONSUMIDOR')),
-    saldo          NUMERIC(10,2) NOT NULL DEFAULT 0 CHECK (saldo >= 0),
+    saldo          NUMERIC(10,2) NOT NULL DEFAULT 0,
     ativo          BOOLEAN       NOT NULL DEFAULT TRUE,
-    data_cadastro  TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP
+    data_cadastro  TIMESTAMPTZ   NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE produto (
@@ -27,14 +27,14 @@ CREATE TABLE recarga (
     valor            NUMERIC(10,2) NOT NULL CHECK (valor > 0),
     forma_pagamento  VARCHAR(20)   NOT NULL
                      CHECK (forma_pagamento IN ('CREDITO', 'DEBITO', 'PIX')),
-    data_hora        TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP
+    data_hora        TIMESTAMPTZ   NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE compra (
     id_compra    SERIAL PRIMARY KEY,
     id_usuario   INTEGER       NOT NULL REFERENCES usuario (id_usuario),
     valor_total  NUMERIC(10,2) NOT NULL CHECK (valor_total >= 0),
-    data_hora    TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP
+    data_hora    TIMESTAMPTZ   NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE item_compra (

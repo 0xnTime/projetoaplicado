@@ -1,7 +1,7 @@
 import { sql, type SQL } from "bun";
 import { z } from "zod";
 
-const TIMEZONE = "America/Sao_Paulo";
+export const TIMEZONE = "America/Sao_Paulo";
 
 export class HttpError extends Error {
   constructor(
@@ -16,14 +16,14 @@ export const idParams = z.object({
   id: z.coerce.number().int().positive(),
 });
 
-export const periodoQuery = z.object({
-  de: z.iso.date().optional(),
-  ate: z.iso.date().optional(),
+export const periodQuery = z.object({
+  from: z.iso.date().optional(),
+  to: z.iso.date().optional(),
 });
 
-export function periodoFilter(coluna: SQL.Query<unknown>, de?: string, ate?: string) {
+export function periodFilter(column: SQL.Query<unknown>, from?: string, to?: string) {
   return sql`
-    ${de ? sql`AND ${coluna} >= ${de}::timestamp AT TIME ZONE ${TIMEZONE}` : sql``}
-    ${ate ? sql`AND ${coluna} < (${ate}::date + 1)::timestamp AT TIME ZONE ${TIMEZONE}` : sql``}
+    ${from ? sql`AND ${column} >= ${from}::timestamp AT TIME ZONE ${TIMEZONE}` : sql``}
+    ${to ? sql`AND ${column} < (${to}::date + 1)::timestamp AT TIME ZONE ${TIMEZONE}` : sql``}
   `;
 }

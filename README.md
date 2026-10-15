@@ -42,16 +42,30 @@ podman-compose down -v
 
 O código é montado nos containers, então possui hotreload.
 
-Mudanças no `.env` ou no `compose.yaml` exigem recriar os containers: `podman-compose down && podman-compose up -d` (sem `-v`, o banco é mantido).
+Mudanças no `.env` ou no `compose.yaml` exigem recriar os containers: `podman-compose down && podman-compose up -d`.
 
 ## Autenticação
 A API usa JWT. Defina `JWT_SECRET` no `.env` (`openssl rand -hex 32`).
 
 - `POST /api/auth/cadastro` autocadastro (sempre Consumidor)
-- `POST /api/auth/login` retorna `{ token, usuario }`
+- `POST /api/auth/login` retorna `{ token, user }`
+- `POST /api/auth/esqueci-senha` gera um link de redefinição (por enquanto aparece só no log do servidor: `podman logs cantina-server | grep "password reset"`)
+- `POST /api/auth/redefinir-senha` recebe `{ token, password }` e retorna `{ token, user }`
 - `GET /api/auth/me` usuário logado e saldo
 
-As demais rotas exigem o header `Authorization: Bearer <token>`. Rotas de usuários e escrita de produtos são exclusivas do Administrador; recargas e compras usam o usuário do token.
+## Fotos de produtos
+- `PUT /api/produtos/:id/foto` recebe a imagem crua no corpo (JPEG, PNG ou WebP, até 5 MB), ex.: `fetch(url, { method: "PUT", headers, body: file })`
+- `DELETE /api/produtos/:id/foto` remove a foto
+- `GET /api/uploads/:arquivo` serve a imagem (público, para funcionar em `<img src>`), o campo `photo` do produto já vem com esse caminho
+
+Os arquivos ficam no volume `uploads` do container (`UPLOAD_DIR`).
+
+## Relatórios
+Todos aceitam `from` e `to` (`YYYY-MM-DD`, opcionais).
+
+- `GET /api/relatorios/vendas?groupBy=day|month|year` total arrecadado e quantidade de vendas, agrupados por período
+- `GET /api/relatorios/produtos-mais-vendidos?limit=10` quantidade vendida por produto (`limit` opcional)
+- `GET /api/relatorios/consumo/:idUsuario` total gasto e produtos adquiridos por um consumidor
 
 ## Comandos Bun dentro do container
 ```sh

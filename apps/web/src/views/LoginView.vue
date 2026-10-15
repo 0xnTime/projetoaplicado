@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import type { LoginResponse } from "@cantina/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api } from "@/lib/api";
 import { signIn } from "@/lib/session";
+import { homeFor } from "@/router";
 
 type Mode = "login" | "signup" | "forgot" | "reset";
 
@@ -21,8 +23,11 @@ const texts: Record<Mode, { title: string; description: string; submit: string }
   reset: { title: "Redefinir senha", description: "Escolha uma nova senha para sua conta", submit: "Salvar nova senha" },
 };
 
-const resetToken = new URLSearchParams(location.search).get("redefinir");
-if (resetToken) history.replaceState(null, "", location.pathname);
+const route = useRoute();
+const router = useRouter();
+
+const resetToken = typeof route.query.redefinir === "string" ? route.query.redefinir : null;
+if (resetToken) history.replaceState(history.state, "", location.pathname);
 
 const mode = ref<Mode>(resetToken ? "reset" : "login");
 const name = ref("");
@@ -82,8 +87,10 @@ async function submit() {
             body: { email: email.value, password: password.value },
           });
   submitting.value = false;
-  if (result.success) signIn(result.data);
-  else error.value = result.error;
+  if (result.success) {
+    signIn(result.data);
+    router.replace(homeFor(result.data.user));
+  } else error.value = result.error;
 }
 </script>
 

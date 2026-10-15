@@ -53,7 +53,6 @@ function selectProductSales(filter: { from?: string; to?: string; userId?: numbe
 export async function reportRoutes(app: FastifyInstance) {
   app.addHook("onRequest", adminOnly);
 
-  // RF07.4
   app.get("/api/relatorios/vendas", async (req): Promise<ApiResult<SalesReport>> => {
     const { from, to, groupBy } = salesQuery.parse(req.query);
     const rows = await sql<{ period: string; revenue: string; sales_count: number }[]>`
@@ -81,14 +80,12 @@ export async function reportRoutes(app: FastifyInstance) {
     };
   });
 
-  // RF07.5
   app.get("/api/relatorios/produtos-mais-vendidos", async (req): Promise<ApiResult<ProductSales[]>> => {
     const query = topProductsQuery.parse(req.query);
     const rows = await selectProductSales(query);
     return { success: true, data: rows.map(toProductSales) };
   });
 
-  // RF07.6
   app.get("/api/relatorios/consumo/:id", async (req): Promise<ApiResult<ConsumptionReport>> => {
     const { id } = idParams.parse(req.params);
     const { from, to } = periodQuery.parse(req.query);

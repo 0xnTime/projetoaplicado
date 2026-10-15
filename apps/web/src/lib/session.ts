@@ -1,5 +1,6 @@
 import { ref } from "vue";
 import type { LoginResponse, User } from "@cantina/types";
+import { api } from "./api";
 
 const STORAGE_KEY = "cantina.token";
 
@@ -28,4 +29,10 @@ export function signOut() {
   try {
     localStorage.removeItem(STORAGE_KEY);
   } catch {}
+}
+
+export async function refreshUser() {
+  if (!token.value) return;
+  const result = await api<User>("/auth/me");
+  if (result.success) user.value = result.data;
 }

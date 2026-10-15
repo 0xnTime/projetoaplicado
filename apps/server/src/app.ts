@@ -17,7 +17,6 @@ const UNIQUE_VIOLATION = "23505";
 
 const duplicateMessages: Record<string, string> = {
   usuario_email_key: "Este e-mail já está cadastrado",
-  produto_codigo_barras_key: "Já existe um produto com este código de barras",
 };
 
 const fastifyMessages: Record<string, string> = {

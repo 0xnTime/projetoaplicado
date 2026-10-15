@@ -4,7 +4,6 @@ export interface Product {
   category: string;
   price: number;
   stock: number;
-  barcode: string;
   photo: string | null;
   active: boolean;
 }

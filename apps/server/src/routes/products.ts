@@ -12,7 +12,6 @@ interface ProductRow {
   categoria: string;
   preco: string;
   estoque: number;
-  codigo_barras: string;
   foto: string | null;
   ativo: boolean;
 }
@@ -24,7 +23,6 @@ function toProduct(row: ProductRow): Product {
     category: row.categoria,
     price: Number(row.preco),
     stock: row.estoque,
-    barcode: row.codigo_barras,
     photo: row.foto,
     active: row.ativo,
   };
@@ -41,7 +39,6 @@ const createBody = z.object({
   category: z.string().trim().min(1).max(60),
   price: z.number().nonnegative().multipleOf(0.01),
   stock: z.number().int().nonnegative(),
-  barcode: z.string().trim().min(1).max(50),
 });
 
 const updateBody = createBody.partial().refine((b) => Object.keys(b).length > 0, {
@@ -91,9 +88,8 @@ export async function productRoutes(app: FastifyInstance) {
   app.post("/api/produtos", { onRequest: adminOnly }, async (req, reply): Promise<ApiResult<Product>> => {
     const body = createBody.parse(req.body);
     const [row] = await sql<ProductRow[]>`
-      INSERT INTO produto (nome, categoria, preco, estoque, codigo_barras, foto)
-      VALUES (${body.name}, ${body.category}, ${body.price}, ${body.stock},
-              ${body.barcode}, NULL)
+      INSERT INTO produto (nome, categoria, preco, estoque, foto)
+      VALUES (${body.name}, ${body.category}, ${body.price}, ${body.stock}, NULL)
       RETURNING *
     `;
     return reply.code(201).send({ success: true, data: toProduct(row!) });
@@ -107,7 +103,6 @@ export async function productRoutes(app: FastifyInstance) {
       categoria: body.category,
       preco: body.price,
       estoque: body.stock,
-      codigo_barras: body.barcode,
     };
     const columns = (Object.keys(changes) as (keyof typeof changes)[]).filter(
       (k) => changes[k] !== undefined,

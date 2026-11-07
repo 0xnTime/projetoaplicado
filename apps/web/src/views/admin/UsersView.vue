@@ -14,7 +14,7 @@ import {
   SearchIcon,
 } from "@lucide/vue";
 import type { User } from "@cantina/types";
-import { formatCurrency } from "@cantina/utils";
+import { formatCpf, formatCurrency } from "@cantina/utils";
 import ConfirmDialog from "@/components/ConfirmDialog.vue";
 import PageHeader from "@/components/PageHeader.vue";
 import UserFormDialog from "@/components/admin/UserFormDialog.vue";
@@ -111,7 +111,7 @@ async function toggleActive() {
       <div class="flex flex-wrap items-center gap-2">
         <div class="relative min-w-48 flex-1">
           <SearchIcon class="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input v-model="search" placeholder="Buscar por nome ou e-mail" class="pl-8" aria-label="Buscar usuário" />
+          <Input v-model="search" placeholder="Buscar por nome, e-mail ou CPF" class="pl-8" aria-label="Buscar usuário" />
         </div>
         <Select v-model="role">
           <SelectTrigger class="w-40" aria-label="Perfil"><SelectValue /></SelectTrigger>
@@ -151,7 +151,7 @@ async function toggleActive() {
                 {{ user.name }}
                 <span v-if="user.id === currentUser?.id" class="text-xs font-normal text-muted-foreground">(você)</span>
               </p>
-              <p class="text-xs text-muted-foreground">{{ user.email }}</p>
+              <p class="text-xs text-muted-foreground">{{ user.email }} · {{ formatCpf(user.cpf) }}</p>
             </TableCell>
             <TableCell class="hidden md:table-cell">
               <Badge :variant="user.role === 'ADMINISTRADOR' ? 'default' : 'secondary'">{{ roleLabels[user.role] }}</Badge>

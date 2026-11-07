@@ -2,6 +2,7 @@ CREATE TABLE usuario (
     id_usuario     SERIAL PRIMARY KEY,
     nome           VARCHAR(120)  NOT NULL,
     email          VARCHAR(160)  NOT NULL UNIQUE,
+    cpf            CHAR(11)      NOT NULL UNIQUE CHECK (cpf ~ '^[0-9]{11}$'),
     senha_hash     VARCHAR(255)  NOT NULL,
     perfil         VARCHAR(20)   NOT NULL DEFAULT 'CONSUMIDOR'
                    CHECK (perfil IN ('ADMINISTRADOR', 'CONSUMIDOR')),

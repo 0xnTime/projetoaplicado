@@ -2,6 +2,7 @@
 import { computed, ref, watch } from "vue";
 import { toast } from "vue-sonner";
 import type { Role, User } from "@cantina/types";
+import { formatCpf, isValidCpf } from "@cantina/utils";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -22,7 +23,7 @@ const props = defineProps<{ user: User | null; mode: "data" | "password" }>();
 const open = defineModel<boolean>("open", { required: true });
 const emit = defineEmits<{ saved: [user: User] }>();
 
-const form = ref({ name: "", email: "", role: "CONSUMIDOR" as Role, password: "", confirmation: "" });
+const form = ref({ name: "", email: "", cpf: "", role: "CONSUMIDOR" as Role, password: "", confirmation: "" });
 const error = ref<string | null>(null);
 const submitting = ref(false);
 
@@ -46,6 +47,7 @@ watch(open, (value) => {
   form.value = {
     name: props.user?.name ?? "",
     email: props.user?.email ?? "",
+    cpf: formatCpf(props.user?.cpf ?? ""),
     role: props.user?.role ?? "CONSUMIDOR",
     password: "",
     confirmation: "",
@@ -53,10 +55,21 @@ watch(open, (value) => {
   error.value = null;
 });
 
+watch(
+  () => form.value.cpf,
+  (value) => {
+    form.value.cpf = formatCpf(value);
+  },
+);
+
 async function submit() {
   error.value = null;
   if (showPassword.value && form.value.password !== form.value.confirmation) {
     error.value = "As senhas não conferem";
+    return;
+  }
+  if (props.mode === "data" && !isValidCpf(form.value.cpf)) {
+    error.value = "CPF inválido";
     return;
   }
 
@@ -66,6 +79,7 @@ async function submit() {
       : {
           name: form.value.name,
           email: form.value.email,
+          cpf: form.value.cpf,
           ...(ownAccount.value ? {} : { role: form.value.role }),
           ...(creating.value ? { password: form.value.password } : {}),
         };
@@ -105,6 +119,18 @@ async function submit() {
           <div class="grid gap-2">
             <Label for="user-email">E-mail</Label>
             <Input id="user-email" v-model="form.email" type="email" maxlength="160" autocomplete="off" required />
+          </div>
+          <div class="grid gap-2">
+            <Label for="user-cpf">CPF</Label>
+            <Input
+              id="user-cpf"
+              v-model="form.cpf"
+              inputmode="numeric"
+              maxlength="14"
+              placeholder="000.000.000-00"
+              autocomplete="off"
+              required
+            />
           </div>
           <div class="grid gap-2">
             <Label for="user-role">Perfil</Label>

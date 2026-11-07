@@ -1,8 +1,8 @@
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
-INSERT INTO usuario (nome, email, senha_hash, perfil, saldo) VALUES
-    ('Administrador', 'admin@sc.senai.br',      crypt('senha123', gen_salt('bf')), 'ADMINISTRADOR', 0),
-    ('Consumidor',    'consumidor@sc.senai.br', crypt('senha123', gen_salt('bf')), 'CONSUMIDOR',    20.00);
+INSERT INTO usuario (nome, email, cpf, senha_hash, perfil, saldo) VALUES
+    ('Administrador', 'admin@sc.senai.br',      '52998224725', crypt('senha123', gen_salt('bf')), 'ADMINISTRADOR', 0),
+    ('Consumidor',    'consumidor@sc.senai.br', '11144477735', crypt('senha123', gen_salt('bf')), 'CONSUMIDOR',    20.00);
 
 INSERT INTO produto (nome, categoria, preco, estoque) VALUES
     ('Água mineral 500ml',  'Bebidas',  3.00, 24),

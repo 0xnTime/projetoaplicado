@@ -5,11 +5,12 @@ import type { ApiResult, LoginResponse, User } from "@cantina/types";
 import { env } from "../config/env";
 import { authenticated } from "../lib/auth";
 import { HttpError } from "../lib/http";
-import { columns, toUser, type UserRow } from "./users";
+import { columns, cpfSchema, toUser, type UserRow } from "./users";
 
 const signupBody = z.object({
   name: z.string().trim().min(1).max(120),
   email: z.email().trim().toLowerCase().max(160),
+  cpf: cpfSchema,
   password: z.string().min(8).max(72),
 });
 
@@ -47,8 +48,8 @@ export async function authRoutes(app: FastifyInstance) {
     const body = signupBody.parse(req.body);
     const passwordHash = await Bun.password.hash(body.password);
     const [row] = await sql<UserRow[]>`
-      INSERT INTO usuario (nome, email, senha_hash, perfil)
-      VALUES (${body.name}, ${body.email}, ${passwordHash}, 'CONSUMIDOR')
+      INSERT INTO usuario (nome, email, cpf, senha_hash, perfil)
+      VALUES (${body.name}, ${body.email}, ${body.cpf}, ${passwordHash}, 'CONSUMIDOR')
       RETURNING ${columns}
     `;
     return reply.code(201).send({ success: true, data: issueToken(row!) });

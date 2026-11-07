@@ -17,6 +17,7 @@ const UNIQUE_VIOLATION = "23505";
 
 const duplicateMessages: Record<string, string> = {
   usuario_email_key: "Este e-mail já está cadastrado",
+  usuario_cpf_key: "Este CPF já está cadastrado",
 };
 
 const fastifyMessages: Record<string, string> = {

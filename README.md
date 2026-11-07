@@ -47,7 +47,7 @@ Mudanças no `.env` ou no `compose.yaml` exigem recriar os containers: `podman-c
 ## Autenticação
 A API usa JWT. Defina `JWT_SECRET` no `.env` (`openssl rand -hex 32`).
 
-- `POST /api/auth/cadastro` autocadastro (sempre Consumidor)
+- `POST /api/auth/cadastro` autocadastro (sempre Consumidor), recebe `{ name, email, cpf, password }`
 - `POST /api/auth/login` retorna `{ token, user }`
 - `POST /api/auth/esqueci-senha` gera um link de redefinição (por enquanto aparece só no log do servidor: `podman logs cantina-server | grep "password reset"`)
 - `POST /api/auth/redefinir-senha` recebe `{ token, password }` e retorna `{ token, user }`
@@ -74,4 +74,4 @@ podman exec -it cantina-web bun add <pacote> --cwd apps/web
 podman exec -it cantina-server bun run typecheck
 ```
 
-Usuários de exemplo (senha `senha123`): `admin@sc.senai.br`, `consumidor@sc.senai.br`.
+Usuários de exemplo (senha `senha123`): `admin@sc.senai.br` (CPF `529.982.247-25`), `consumidor@sc.senai.br` (CPF `111.444.777-35`).

@@ -2,6 +2,7 @@
 import { computed, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import type { LoginResponse } from "@cantina/types";
+import { formatCpf, isValidCpf } from "@cantina/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -32,14 +33,19 @@ if (resetToken) history.replaceState(history.state, "", location.pathname);
 const mode = ref<Mode>(resetToken ? "reset" : "login");
 const name = ref("");
 const email = ref("");
+const cpf = ref("");
 const password = ref("");
 const confirmation = ref("");
 const error = ref<string | null>(null);
 const notice = ref<string | null>(null);
 const submitting = ref(false);
 
-watch([name, email, password, confirmation], () => {
+watch([name, email, cpf, password, confirmation], () => {
   error.value = null;
+});
+
+watch(cpf, (value) => {
+  cpf.value = formatCpf(value);
 });
 
 const text = computed(() => texts[mode.value]);
@@ -62,6 +68,11 @@ async function submit() {
     return;
   }
 
+  if (mode.value === "signup" && !isValidCpf(cpf.value)) {
+    error.value = "CPF inválido";
+    return;
+  }
+
   submitting.value = true;
   if (mode.value === "forgot") {
     const result = await api<null>("/auth/esqueci-senha", { method: "POST", body: { email: email.value } });
@@ -75,7 +86,7 @@ async function submit() {
     mode.value === "signup"
       ? await api<LoginResponse>("/auth/cadastro", {
           method: "POST",
-          body: { name: name.value, email: email.value, password: password.value },
+          body: { name: name.value, email: email.value, cpf: cpf.value, password: password.value },
         })
       : mode.value === "reset"
         ? await api<LoginResponse>("/auth/redefinir-senha", {
@@ -114,6 +125,18 @@ async function submit() {
           <div v-if="mode !== 'reset'" class="grid gap-2">
             <Label for="email">E-mail</Label>
             <Input id="email" v-model="email" type="email" autocomplete="email" placeholder="exemplo@sc.senai.br" required />
+          </div>
+          <div v-if="mode === 'signup'" class="grid gap-2">
+            <Label for="cpf">CPF</Label>
+            <Input
+              id="cpf"
+              v-model="cpf"
+              inputmode="numeric"
+              maxlength="14"
+              placeholder="000.000.000-00"
+              :aria-invalid="error ? true : undefined"
+              required
+            />
           </div>
           <div v-if="mode !== 'forgot'" class="grid gap-2">
             <div class="flex items-center">

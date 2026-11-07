@@ -2,26 +2,34 @@ import { sql } from "bun";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import type { ApiResult, Role, User } from "@cantina/types";
+import { isValidCpf, onlyDigits } from "@cantina/utils";
 import { adminOnly } from "../lib/auth";
 import { HttpError, idParams } from "../lib/http";
+
+export const cpfSchema = z
+  .string()
+  .transform(onlyDigits)
+  .refine(isValidCpf, { message: "CPF inválido" });
 
 export interface UserRow {
   id_usuario: number;
   nome: string;
   email: string;
+  cpf: string;
   perfil: Role;
   saldo: string;
   ativo: boolean;
   data_cadastro: Date;
 }
 
-export const columns = sql`id_usuario, nome, email, perfil, saldo, ativo, data_cadastro`;
+export const columns = sql`id_usuario, nome, email, cpf, perfil, saldo, ativo, data_cadastro`;
 
 export function toUser(row: UserRow): User {
   return {
     id: row.id_usuario,
     name: row.nome,
     email: row.email,
+    cpf: row.cpf,
     role: row.perfil,
     balance: Number(row.saldo),
     active: row.ativo,
@@ -40,6 +48,7 @@ const listQuery = z.object({
 const createBody = z.object({
   name: z.string().trim().min(1).max(120),
   email: z.email().trim().toLowerCase().max(160),
+  cpf: cpfSchema,
   password: z.string().min(8).max(72),
   role: role.default("CONSUMIDOR"),
 });
@@ -48,6 +57,7 @@ const updateBody = z
   .object({
     name: z.string().trim().min(1).max(120),
     email: z.email().trim().toLowerCase().max(160),
+    cpf: cpfSchema,
     password: z.string().min(8).max(72),
     role,
     active: z.boolean(),
@@ -68,10 +78,12 @@ export async function userRoutes(app: FastifyInstance) {
 
   app.get("/api/usuarios", async (req): Promise<ApiResult<User[]>> => {
     const { search, role, active } = listQuery.parse(req.query);
+    const searchCpf = search ? onlyDigits(search) : "";
+    const cpfFilter = searchCpf ? sql`OR cpf LIKE ${"%" + searchCpf + "%"}` : sql``;
     const rows = await sql<UserRow[]>`
       SELECT ${columns} FROM usuario
       WHERE TRUE
-        ${search ? sql`AND (nome ILIKE ${"%" + search + "%"} OR email ILIKE ${"%" + search + "%"})` : sql``}
+        ${search ? sql`AND (nome ILIKE ${"%" + search + "%"} OR email ILIKE ${"%" + search + "%"} ${cpfFilter})` : sql``}
         ${role ? sql`AND perfil = ${role}` : sql``}
         ${active !== undefined ? sql`AND ativo = ${active}` : sql``}
       ORDER BY nome
@@ -90,8 +102,8 @@ export async function userRoutes(app: FastifyInstance) {
     const body = createBody.parse(req.body);
     const passwordHash = await Bun.password.hash(body.password);
     const [row] = await sql<UserRow[]>`
-      INSERT INTO usuario (nome, email, senha_hash, perfil)
-      VALUES (${body.name}, ${body.email}, ${passwordHash}, ${body.role})
+      INSERT INTO usuario (nome, email, cpf, senha_hash, perfil)
+      VALUES (${body.name}, ${body.email}, ${body.cpf}, ${passwordHash}, ${body.role})
       RETURNING ${columns}
     `;
     return reply.code(201).send({ success: true, data: toUser(row!) });
@@ -106,6 +118,7 @@ export async function userRoutes(app: FastifyInstance) {
     const changes = {
       nome: body.name,
       email: body.email,
+      cpf: body.cpf,
       senha_hash: body.password && (await Bun.password.hash(body.password)),
       perfil: body.role,
       ativo: body.active,

@@ -29,3 +29,28 @@ export function formatCpf(value: string): string {
     .replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3")
     .replace(/\.(\d{3})(\d{1,2})$/, ".$1-$2");
 }
+
+const MAX_CURRENCY_DIGITS = 8;
+
+export function maskCurrency(value: string): string {
+  const digits = value.replace(/\D/g, "").replace(/^0+/, "").slice(0, MAX_CURRENCY_DIGITS);
+  if (!digits) return "";
+  return (Number(digits) / 100).toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+export function parseCurrency(value: string): number {
+  const digits = value.replace(/\D/g, "");
+  return digits ? Number(digits) / 100 : 0;
+}
+
+export function toCurrencyInput(value: number): string {
+  if (value === 0) return "0,00";
+  return maskCurrency(Math.round(value * 100).toString());
+}
+
+export function maskInteger(value: string, maxDigits = 6): string {
+  return value.replace(/\D/g, "").slice(0, maxDigits);
+}

@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from "vue";
+import { computed, nextTick, onBeforeUnmount, ref, watch } from "vue";
 import { toast } from "vue-sonner";
 import { ImageUpIcon, XIcon } from "@lucide/vue";
 import type { Product } from "@cantina/types";
+import { maskCurrency, maskInteger, parseCurrency, toCurrencyInput } from "@cantina/utils";
 import ProductThumb from "@/components/ProductThumb.vue";
 import { Button } from "@/components/ui/button";
 import {
@@ -45,13 +46,23 @@ watch(open, (value) => {
   form.value = {
     name: p?.name ?? "",
     category: p?.category ?? "",
-    price: p ? String(p.price) : "",
+    price: p ? toCurrencyInput(p.price) : "",
     stock: p ? String(p.stock) : "",
   };
   setPreview(null);
   removePhoto.value = false;
   error.value = null;
 });
+
+function onPriceInput(value: string | number) {
+  form.value.price = String(value);
+  nextTick(() => (form.value.price = maskCurrency(form.value.price)));
+}
+
+function onStockInput(value: string | number) {
+  form.value.stock = String(value);
+  nextTick(() => (form.value.stock = maskInteger(form.value.stock)));
+}
 
 onBeforeUnmount(() => setPreview(null));
 
@@ -76,12 +87,12 @@ function clearPhoto() {
 
 async function submit() {
   error.value = null;
-  const price = Number(String(form.value.price).replace(",", "."));
-  const stock = Number(form.value.stock);
-  if (!Number.isFinite(price) || price < 0) {
-    error.value = "Informe um preço válido";
+  if (!form.value.price) {
+    error.value = "Informe o preço do produto";
     return;
   }
+  const price = parseCurrency(form.value.price);
+  const stock = Number(form.value.stock);
   if (!Number.isInteger(stock) || stock < 0) {
     error.value = "O estoque deve ser um número inteiro maior ou igual a zero";
     return;
@@ -90,7 +101,7 @@ async function submit() {
   const body = {
     name: form.value.name.trim(),
     category: form.value.category.trim(),
-    price: Math.round(price * 100) / 100,
+    price,
     stock,
   };
 
@@ -161,11 +172,11 @@ async function submit() {
         <div class="grid gap-4 sm:grid-cols-2">
           <div class="grid gap-2">
             <Label for="product-price">Preço (R$)</Label>
-            <Input id="product-price" v-model="form.price" inputmode="decimal" placeholder="0,00" required />
+            <Input id="product-price" :model-value="form.price" @update:model-value="onPriceInput" inputmode="numeric" placeholder="0,00" autocomplete="off" required />
           </div>
           <div class="grid gap-2">
             <Label for="product-stock">Estoque</Label>
-            <Input id="product-stock" v-model="form.stock" type="number" min="0" step="1" required />
+            <Input id="product-stock" :model-value="form.stock" @update:model-value="onStockInput" inputmode="numeric" placeholder="0" autocomplete="off" required />
           </div>
         </div>
         <p v-if="error" role="alert" class="text-sm text-destructive">{{ error }}</p>

@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, nextTick, onMounted, ref } from "vue";
 import { toast } from "vue-sonner";
 import { CreditCardIcon, QrCodeIcon, WalletCardsIcon } from "@lucide/vue";
 import type { PaymentMethod, Topup } from "@cantina/types";
-import { formatCurrency, formatDateTime } from "@cantina/utils";
+import { formatCurrency, formatDateTime, maskCurrency, parseCurrency, toCurrencyInput } from "@cantina/utils";
 import PageHeader from "@/components/PageHeader.vue";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,16 +20,18 @@ const methods: { value: PaymentMethod; icon: typeof CreditCardIcon }[] = [
   { value: "DEBITO", icon: WalletCardsIcon },
 ];
 
-const amount = ref<number | string>("");
+const amount = ref("");
 const paymentMethod = ref<PaymentMethod>("PIX");
 const error = ref<string | null>(null);
 const submitting = ref(false);
 const recent = ref<Topup[]>([]);
 
-const parsedAmount = computed(() => {
-  const value = Number(String(amount.value).replace(",", "."));
-  return Number.isFinite(value) ? Math.round(value * 100) / 100 : 0;
-});
+function onAmountInput(value: string | number) {
+  amount.value = String(value);
+  nextTick(() => (amount.value = maskCurrency(amount.value)));
+}
+
+const parsedAmount = computed(() => parseCurrency(amount.value));
 const valid = computed(() => parsedAmount.value > 0 && parsedAmount.value <= 10000);
 
 async function loadRecent() {
@@ -83,8 +85,9 @@ onMounted(() => {
               <span class="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted-foreground">R$</span>
               <Input
                 id="amount"
-                v-model="amount"
-                inputmode="decimal"
+                :model-value="amount"
+                @update:model-value="onAmountInput"
+                inputmode="numeric"
                 placeholder="0,00"
                 autocomplete="off"
                 class="h-11 pl-10 text-lg tabular-nums"
@@ -99,7 +102,7 @@ onMounted(() => {
                 type="button"
                 size="sm"
                 :variant="parsedAmount === preset ? 'default' : 'outline'"
-                @click="amount = String(preset)"
+                @click="amount = toCurrencyInput(preset)"
               >
                 {{ formatCurrency(preset) }}
               </Button>

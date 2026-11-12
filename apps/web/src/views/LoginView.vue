@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, nextTick, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import type { LoginResponse } from "@cantina/types";
 import { formatCpf, isValidCpf } from "@cantina/utils";
@@ -44,9 +44,10 @@ watch([name, email, cpf, password, confirmation], () => {
   error.value = null;
 });
 
-watch(cpf, (value) => {
-  cpf.value = formatCpf(value);
-});
+function onCpfInput(value: string | number) {
+  cpf.value = String(value);
+  nextTick(() => (cpf.value = formatCpf(cpf.value)));
+}
 
 const text = computed(() => texts[mode.value]);
 const newPassword = computed(() => mode.value === "signup" || mode.value === "reset");
@@ -130,7 +131,8 @@ async function submit() {
             <Label for="cpf">CPF</Label>
             <Input
               id="cpf"
-              v-model="cpf"
+              :model-value="cpf"
+              @update:model-value="onCpfInput"
               inputmode="numeric"
               maxlength="14"
               placeholder="000.000.000-00"

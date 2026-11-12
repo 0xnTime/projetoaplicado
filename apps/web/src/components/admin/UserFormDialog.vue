@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, nextTick, ref, watch } from "vue";
 import { toast } from "vue-sonner";
 import type { Role, User } from "@cantina/types";
 import { formatCpf, isValidCpf } from "@cantina/utils";
@@ -55,12 +55,10 @@ watch(open, (value) => {
   error.value = null;
 });
 
-watch(
-  () => form.value.cpf,
-  (value) => {
-    form.value.cpf = formatCpf(value);
-  },
-);
+function onCpfInput(value: string | number) {
+  form.value.cpf = String(value);
+  nextTick(() => (form.value.cpf = formatCpf(form.value.cpf)));
+}
 
 async function submit() {
   error.value = null;
@@ -124,7 +122,8 @@ async function submit() {
             <Label for="user-cpf">CPF</Label>
             <Input
               id="user-cpf"
-              v-model="form.cpf"
+              :model-value="form.cpf"
+              @update:model-value="onCpfInput"
               inputmode="numeric"
               maxlength="14"
               placeholder="000.000.000-00"

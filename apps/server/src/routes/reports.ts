@@ -57,7 +57,7 @@ export async function reportRoutes(app: FastifyInstance) {
     const { from, to, groupBy } = salesQuery.parse(req.query);
     const rows = await sql<{ period: string; revenue: string; sales_count: number }[]>`
       SELECT to_char(date_trunc(${groupBy}, data_hora AT TIME ZONE ${TIMEZONE}), ${periodFormats[groupBy]}) AS period,
-             SUM(valor_total) AS revenue,
+             SUM(valor_pago) AS revenue,
              COUNT(*)::int AS sales_count
       FROM compra
       WHERE TRUE ${periodFilter(sql`data_hora`, from, to)}
@@ -96,7 +96,7 @@ export async function reportRoutes(app: FastifyInstance) {
 
     const [[totals], products] = await Promise.all([
       sql<{ total: string; purchase_count: number }[]>`
-        SELECT COALESCE(SUM(valor_total), 0) AS total, COUNT(*)::int AS purchase_count
+        SELECT COALESCE(SUM(valor_pago), 0) AS total, COUNT(*)::int AS purchase_count
         FROM compra
         WHERE id_usuario = ${id} ${periodFilter(sql`data_hora`, from, to)}
       `,

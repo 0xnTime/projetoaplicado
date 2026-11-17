@@ -71,7 +71,7 @@ onMounted(async () => {
               </p>
               <p class="text-xs text-muted-foreground">{{ formatDateTime(purchase.createdAt) }}</p>
             </div>
-            <span class="shrink-0 font-semibold tabular-nums">{{ formatCurrency(purchase.total) }}</span>
+            <span class="shrink-0 font-semibold tabular-nums">{{ formatCurrency(purchase.amountPaid) }}</span>
           </li>
         </ul>
         <Button v-if="purchases?.length" as-child variant="link" class="mt-2 px-0">

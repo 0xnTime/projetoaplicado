@@ -21,7 +21,7 @@ const purchases = ref<Purchase[] | null>(null);
 const topups = ref<Topup[] | null>(null);
 
 const sumCents = (values: number[]) => values.reduce((sum, v) => sum + Math.round(v * 100), 0) / 100;
-const purchasesTotal = computed(() => sumCents((purchases.value ?? []).map((p) => p.total)));
+const purchasesTotal = computed(() => sumCents((purchases.value ?? []).map((p) => p.amountPaid)));
 const topupsTotal = computed(() => sumCents((topups.value ?? []).map((t) => t.amount)));
 
 let lastRequest = 0;
@@ -92,8 +92,12 @@ watch(period, load, { immediate: true });
                   <TableCell class="text-right tabular-nums">{{ formatCurrency(item.unitPrice * item.quantity) }}</TableCell>
                 </TableRow>
                 <TableRow class="hover:bg-transparent">
-                  <TableCell colspan="3" class="text-right font-medium">Total</TableCell>
-                  <TableCell class="text-right font-semibold tabular-nums">{{ formatCurrency(purchase.total) }}</TableCell>
+                  <TableCell colspan="3" class="text-right text-xs text-muted-foreground">Valor de referência</TableCell>
+                  <TableCell class="text-right text-xs text-muted-foreground tabular-nums">{{ formatCurrency(purchase.total) }}</TableCell>
+                </TableRow>
+                <TableRow class="hover:bg-transparent">
+                  <TableCell colspan="3" class="text-right font-medium">Valor pago</TableCell>
+                  <TableCell class="text-right font-semibold tabular-nums">{{ formatCurrency(purchase.amountPaid) }}</TableCell>
                 </TableRow>
               </TableBody>
             </Table>

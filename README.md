@@ -44,6 +44,13 @@ O código é montado nos containers, então possui hotreload.
 
 Mudanças no `.env` ou no `compose.yaml` exigem recriar os containers: `podman-compose down && podman-compose up -d`.
 
+## Migrações
+Os scripts de `db/init/` só rodam quando o banco é criado. Em um banco criado antes da coluna `compra.valor_pago`, rode:
+
+```powershell
+Get-Content db\migrations\001-valor-pago.sql | podman exec -i cantina-db psql -U cantina -d cantina
+```
+
 ## Autenticação
 A API usa JWT. Defina `JWT_SECRET` no `.env` (`openssl rand -hex 32`).
 

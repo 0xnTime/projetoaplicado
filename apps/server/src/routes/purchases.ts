@@ -9,6 +9,7 @@ interface PurchaseRow {
   id_compra: number;
   id_usuario: number;
   valor_total: string;
+  valor_pago: string;
   data_hora: Date;
   items: PurchaseItem[];
 }
@@ -18,6 +19,7 @@ function toPurchase(row: PurchaseRow): Purchase {
     id: row.id_compra,
     userId: row.id_usuario,
     total: Number(row.valor_total),
+    amountPaid: Number(row.valor_pago),
     createdAt: row.data_hora.toISOString(),
     items: row.items,
   };
@@ -53,6 +55,7 @@ const createBody = z.object({
       }),
     )
     .min(1),
+  amountPaid: z.number().min(0).max(99999999.99).multipleOf(0.01),
 });
 
 interface LockedProduct {
@@ -99,11 +102,17 @@ export async function purchaseRoutes(app: FastifyInstance) {
     const ids = [...quantities.keys()];
 
     const purchase = await sql.begin(async (tx) => {
-      const [user] = await tx<{ ativo: boolean }[]>`
-        SELECT ativo FROM usuario WHERE id_usuario = ${userId} FOR UPDATE
+      const [user] = await tx<{ ativo: boolean; saldo: string }[]>`
+        SELECT ativo, saldo FROM usuario WHERE id_usuario = ${userId} FOR UPDATE
       `;
       if (!user) throw new HttpError(404, "Usuário não encontrado");
       if (!user.ativo) throw new HttpError(422, "Usuário inativo");
+
+      const amountPaidCents = Math.round(body.amountPaid * 100);
+      if (amountPaidCents > 0 && amountPaidCents > Math.round(Number(user.saldo) * 100)) {
+        throw new HttpError(422, "O valor pago não pode passar do saldo atual da carteira");
+      }
+      const amountPaid = amountPaidCents / 100;
 
       const products = await tx<LockedProduct[]>`
         SELECT id_produto, nome, preco, estoque, ativo FROM produto
@@ -129,10 +138,12 @@ export async function purchaseRoutes(app: FastifyInstance) {
 
       const total = totalCents / 100;
 
-      await tx`UPDATE usuario SET saldo = saldo - ${total} WHERE id_usuario = ${userId}`;
+      if (amountPaid > 0) {
+        await tx`UPDATE usuario SET saldo = saldo - ${amountPaid} WHERE id_usuario = ${userId}`;
+      }
       const [{ id_compra }] = (await tx<{ id_compra: number }[]>`
-        INSERT INTO compra (id_usuario, valor_total)
-        VALUES (${userId}, ${total})
+        INSERT INTO compra (id_usuario, valor_total, valor_pago)
+        VALUES (${userId}, ${total}, ${amountPaid})
         RETURNING id_compra
       `) as [{ id_compra: number }];
       await tx`

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, nextTick, onMounted, ref } from "vue";
 import { toast } from "vue-sonner";
 import {
   MinusIcon,
@@ -7,10 +7,9 @@ import {
   SearchIcon,
   ShoppingCartIcon,
   Trash2Icon,
-  TriangleAlertIcon,
 } from "@lucide/vue";
 import type { Product, Purchase } from "@cantina/types";
-import { formatCurrency } from "@cantina/utils";
+import { formatCurrency, maskCurrency, parseCurrency, toCurrencyInput } from "@cantina/utils";
 import PageHeader from "@/components/PageHeader.vue";
 import ProductThumb from "@/components/ProductThumb.vue";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +24,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/lib/api";
 import { refreshUser, user } from "@/lib/session";
@@ -42,13 +42,35 @@ const lastAddedId = ref<number | null>(null);
 const checkoutOpen = ref(false);
 const checkoutError = ref<string | null>(null);
 const submitting = ref(false);
+const amountPaid = ref("");
 
 const totalCents = computed(() =>
   cart.value.reduce((sum, item) => sum + Math.round(item.product.price * 100) * item.quantity, 0),
 );
 const total = computed(() => totalCents.value / 100);
 const itemCount = computed(() => cart.value.reduce((sum, item) => sum + item.quantity, 0));
-const balanceAfter = computed(() => (Math.round((user.value?.balance ?? 0) * 100) - totalCents.value) / 100);
+const balanceCents = computed(() => Math.round((user.value?.balance ?? 0) * 100));
+const amountPaidCents = computed(() => Math.round(parseCurrency(amountPaid.value) * 100));
+const amountPaidValue = computed(() => amountPaidCents.value / 100);
+const balanceAfter = computed(() => (balanceCents.value - amountPaidCents.value) / 100);
+const amountPaidError = computed(() => {
+  if (!/\d/.test(amountPaid.value)) return "Informe quanto você vai pagar";
+  if (amountPaidCents.value < 0) return "O valor não pode ser negativo";
+  if (amountPaidCents.value > 0 && amountPaidCents.value > balanceCents.value) {
+    return "O valor não pode passar do seu saldo atual";
+  }
+  return null;
+});
+
+function onAmountPaidInput(value: string | number) {
+  const previous = amountPaid.value;
+  amountPaid.value = String(value);
+  nextTick(() => {
+    const masked = maskCurrency(amountPaid.value);
+    const erasingZero = previous === "0,00" && amountPaid.value.length < previous.length;
+    amountPaid.value = masked || (/\d/.test(amountPaid.value) && !erasingZero ? "0,00" : "");
+  });
+}
 
 const categories = computed(() => [...new Set((products.value ?? []).map((p) => p.category))].sort());
 
@@ -110,15 +132,20 @@ function removeFromCart(item: CartItem) {
 
 function openCheckout() {
   checkoutError.value = null;
+  amountPaid.value = toCurrencyInput(total.value);
   checkoutOpen.value = true;
 }
 
 async function confirmPurchase() {
+  if (amountPaidError.value) return;
   submitting.value = true;
   checkoutError.value = null;
   const result = await api<Purchase>("/compras", {
     method: "POST",
-    body: { items: cart.value.map((item) => ({ productId: item.product.id, quantity: item.quantity })) },
+    body: {
+      items: cart.value.map((item) => ({ productId: item.product.id, quantity: item.quantity })),
+      amountPaid: amountPaidValue.value,
+    },
   });
   submitting.value = false;
   if (!result.success) {
@@ -131,7 +158,7 @@ async function confirmPurchase() {
   lastAddedId.value = null;
   await Promise.all([refreshUser(), loadProducts()]);
   toast.success("Compra finalizada", {
-    description: `${formatCurrency(result.data.total)} debitado da carteira. Saldo atual: ${formatCurrency(user.value?.balance ?? 0)}`,
+    description: `${formatCurrency(result.data.amountPaid)} debitado da carteira. Saldo atual: ${formatCurrency(user.value?.balance ?? 0)}`,
   });
 }
 
@@ -257,7 +284,7 @@ onMounted(() => {
     <DialogContent class="sm:max-w-md">
       <DialogHeader>
         <DialogTitle>Confirmar compra</DialogTitle>
-        <DialogDescription>O valor será debitado da sua carteira virtual.</DialogDescription>
+        <DialogDescription>O valor pago será debitado da sua carteira virtual.</DialogDescription>
       </DialogHeader>
       <ul class="max-h-64 divide-y overflow-y-auto">
         <li v-for="item in cart" :key="item.product.id" class="flex justify-between gap-4 py-2 text-sm">
@@ -265,29 +292,47 @@ onMounted(() => {
           <span class="tabular-nums">{{ formatCurrency(item.product.price * item.quantity) }}</span>
         </li>
       </ul>
+      <div class="grid gap-2">
+        <Label for="amountPaid">Quanto você vai pagar?</Label>
+        <div class="relative">
+          <span class="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted-foreground">R$</span>
+          <Input
+            id="amountPaid"
+            :model-value="amountPaid"
+            @update:model-value="onAmountPaidInput"
+            inputmode="numeric"
+            placeholder="0,00"
+            autocomplete="off"
+            class="h-11 pl-10 text-lg tabular-nums"
+            :aria-invalid="amountPaidError ? true : undefined"
+            @input="checkoutError = null"
+          />
+        </div>
+        <p v-if="amountPaidError" role="alert" class="text-sm text-destructive">{{ amountPaidError }}</p>
+      </div>
       <dl class="grid gap-1.5 rounded-lg bg-muted p-3 text-sm">
+        <div class="flex justify-between">
+          <dt class="text-muted-foreground">Valor de referência</dt>
+          <dd class="tabular-nums">{{ formatCurrency(total) }}</dd>
+        </div>
+        <div class="flex justify-between">
+          <dt class="text-muted-foreground">Valor pago</dt>
+          <dd class="tabular-nums">{{ formatCurrency(amountPaidValue) }}</dd>
+        </div>
         <div class="flex justify-between">
           <dt class="text-muted-foreground">Saldo atual</dt>
           <dd class="tabular-nums">{{ formatCurrency(user?.balance ?? 0) }}</dd>
-        </div>
-        <div class="flex justify-between">
-          <dt class="text-muted-foreground">Total da compra</dt>
-          <dd class="tabular-nums">− {{ formatCurrency(total) }}</dd>
         </div>
         <div class="flex justify-between border-t pt-1.5 font-semibold">
           <dt>Saldo após a compra</dt>
           <dd class="tabular-nums" :class="{ 'text-destructive': balanceAfter < 0 }">{{ formatCurrency(balanceAfter) }}</dd>
         </div>
       </dl>
-      <p v-if="balanceAfter < 0" class="flex items-start gap-1.5 text-sm text-destructive">
-        <TriangleAlertIcon class="mt-0.5 size-4 shrink-0" />
-        Seu saldo ficará negativo. Faça uma recarga assim que possível.
-      </p>
       <p v-if="checkoutError" role="alert" class="text-sm text-destructive">{{ checkoutError }}</p>
       <DialogFooter>
         <Button variant="outline" @click="checkoutOpen = false">Voltar</Button>
-        <Button :disabled="submitting || cart.length === 0" @click="confirmPurchase">
-          {{ submitting ? "Finalizando..." : `Pagar ${formatCurrency(total)}` }}
+        <Button :disabled="submitting || cart.length === 0 || !!amountPaidError" @click="confirmPurchase">
+          {{ submitting ? "Finalizando..." : `Pagar ${formatCurrency(amountPaidValue)}` }}
         </Button>
       </DialogFooter>
     </DialogContent>

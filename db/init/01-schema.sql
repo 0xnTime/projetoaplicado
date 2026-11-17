@@ -34,6 +34,7 @@ CREATE TABLE compra (
     id_compra    SERIAL PRIMARY KEY,
     id_usuario   INTEGER       NOT NULL REFERENCES usuario (id_usuario),
     valor_total  NUMERIC(10,2) NOT NULL CHECK (valor_total >= 0),
+    valor_pago   NUMERIC(10,2) NOT NULL CHECK (valor_pago >= 0),
     data_hora    TIMESTAMPTZ   NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 

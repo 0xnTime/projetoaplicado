@@ -9,6 +9,7 @@ export interface Purchase {
   id: number;
   userId: number;
   total: number;
+  amountPaid: number;
   createdAt: string;
   items: PurchaseItem[];
 }
